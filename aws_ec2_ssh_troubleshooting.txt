@@ -1,0 +1,119 @@
+AWS SSH Client Troubleshoot
+
+
+Step 1: Verify EC2 Instance Status
+
+1. Go to the AWS Management Console → EC2 → Instances.
+2. Confirm that your instance is:
+   - Running (not stopped or terminated).
+   - Assigned a public IPv4 address.
+3. Copy the Public IPv4 address for the SSH connection.
+
+If the instance is stopped, start it before proceeding.
+
+
+Step 2: Check Security Group Rules
+
+1. Go to the EC2 Dashboard → Instances.
+2. Select your instance.
+3. Scroll down and find the Security tab.
+4. Click on the Security Group name associated with your instance.
+5. Go to the Inbound rules and confirm you have the following rule:
+   - Type: SSH
+   - Protocol: TCP
+   - Port range: 22
+   - Source: 0.0.0.0/0 (for public access) or your IP (for restricted access).
+
+If the rule is missing:
+
+- Click Edit inbound rules → Add rule.
+- Select:
+  - Type: SSH
+  - Protocol: TCP
+  - Port range: 22
+  - Source: 0.0.0.0/0
+- Click Save rules.
+
+
+Step 3: Review Network ACLs and VPC Settings
+
+1. Go to VPC Dashboard → Network ACLs.
+2. Select the ACL associated with your EC2 instance.
+3. Go to the Inbound Rules and confirm:
+   - Rule: SSH
+   - Protocol: TCP
+   - Port range: 22
+   - Source: 0.0.0.0/0.
+4. Go to the Outbound Rules and confirm:
+   - Rule: Allow all traffic.
+   - Destination: 0.0.0.0/0.
+
+If port 22 is missing, add the necessary rules.
+
+
+Step 4: Validate Key Pair and Permissions
+
+If your key file has incorrect permissions, SSH will refuse the connection.
+
+1. Open PowerShell or Command Prompt.
+2. Navigate to the folder containing your .pem key:
+
+cd C:\path\to\your\keyfile
+
+3. Set the correct permissions:
+
+icacls "aws1.pem" /inheritance:r
+icacls "aws1.pem" /grant:r "$($env:USERNAME):(R)"
+
+For Linux/WSL users:
+
+chmod 400 aws1.pem
+
+
+Step 5: SSH into the EC2 Instance
+
+Use the correct SSH command to connect:
+
+ssh -i "aws1.pem" ubuntu@<EC2-PUBLIC-IP>
+
+For Amazon Linux instances:
+
+ssh -i "aws1.pem" ec2-user@<EC2-PUBLIC-IP>
+
+
+Step 6: Test Network Connectivity
+
+If you still cannot connect, check the network connection.
+
+1. Ping the EC2 instance:
+
+ping <EC2-PUBLIC-IP>
+
+- If the ping fails, the instance may be unreachable.
+
+2. Test port 22 with Telnet or PowerShell:
+
+Test-NetConnection <EC2-PUBLIC-IP> -Port 22
+
+If port 22 is closed, check your security group and network settings.
+
+
+Step 7: Restart the Instance
+
+If all settings seem correct but SSH still times out:
+
+1. Go to the EC2 console.
+2. Select the instance → Instance State → Reboot.
+3. Wait for the instance to boot and try connecting again.
+
+
+- Elastic IP: If you frequently stop/start your instance, the public IP changes. Assign an Elastic IP for a static public IP.
+- System Logs: Check EC2 system logs for issues:
+  - Go to EC2 Console → Instances.
+  - Select the instance → Actions → Monitor and troubleshoot → Get system log.
+- SSH Agent: Use SSH agent to avoid typing the key file path every time:
+
+Start-Service ssh-agent
+ssh-add "$HOME\.ssh\aws1.pem"
+ssh ubuntu@<EC2-PUBLIC-IP>
+
